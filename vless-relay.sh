@@ -26,14 +26,14 @@ for url in \
 do
     echo "尝试获取 IP：$url"
     IP=$(timeout 5 curl -s "$url" || true)
-    if [[ -n "$IP" && "$IP" != *"<html>"* && "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "✅ 成功获取公网 IP: $IP"
+    if [[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "✅ 获取公网 IP: $IP"
         break
     fi
 done
 
-if [[ -z "$IP" || "$IP" == *"<html>"* ]]; then
-    echo "❌ 无法获取公网 IP，终止执行。"
+if [[ -z "$IP" || "$IP" != *.* ]]; then
+    echo "❌ 获取公网 IP 失败，脚本终止"
     exit 1
 fi
 
@@ -63,7 +63,7 @@ cat > config.json <<EOF
       "decryption": "none"
     },
     "streamSettings": {
-      "network": "tcp",
+      "network": "xhttp",
       "security": "reality",
       "realitySettings": {
         "show": false,
@@ -72,6 +72,11 @@ cat > config.json <<EOF
         "serverNames": ["${SNI}"],
         "privateKey": "${PRIVATE_KEY}",
         "shortIds": ["${SHORT_ID}"]
+      },
+      "xhttpSettings": {
+        "host": ["${SNI}"],
+        "path": "/${SHORT_ID}?dw=2560",
+        "mode": "stream-one"
       }
     }
   }],
