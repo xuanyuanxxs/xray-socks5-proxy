@@ -17,18 +17,24 @@ echo "[4] 生成 SHORT_ID: $SHORT_ID"
 
 echo "[5] 获取公网 IP..."
 IP=""
-for url in "https://api.ipify.org" "https://ifconfig.me"; do
+for url in \
+  "https://api.ipify.org" \
+  "https://ifconfig.me" \
+  "https://ipinfo.io/ip" \
+  "https://icanhazip.com" \
+  "https://ident.me"
+do
     echo "尝试获取 IP：$url"
     IP=$(timeout 5 curl -s "$url" || true)
-    if [[ -n "$IP" && "$IP" != *"<html>"* ]]; then
+    if [[ -n "$IP" && "$IP" != *"<html>"* && "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "✅ 成功获取公网 IP: $IP"
         break
     fi
 done
+
 if [[ -z "$IP" || "$IP" == *"<html>"* ]]; then
-    IP="0.0.0.0"
-    echo "⚠️ 获取公网 IP 失败，使用默认 IP $IP"
-else
-    echo "✅ 获取到公网 IP: $IP"
+    echo "❌ 无法获取公网 IP，终止执行。"
+    exit 1
 fi
 
 echo "[6] 生成 Reality 密钥对..."
