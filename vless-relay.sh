@@ -11,7 +11,7 @@ echo "[2] 当前目录：$(pwd)"
 PORT=$((RANDOM % 40000 + 20000))
 echo "[3] 随机生成代理端口: $PORT"
 
-SNI="www.yahoo.com"
+SNI="weixin.qq.com"
 SHORT_ID=$(openssl rand -hex 8)
 echo "[4] 生成 SHORT_ID: $SHORT_ID"
 
