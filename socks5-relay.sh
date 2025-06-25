@@ -9,38 +9,53 @@ if [[ "$VLESS_URL" != vless://* ]]; then
   exit 1
 fi
 
+# 去除 # 后的标签部分
 VLESS_URL_CLEAN=${VLESS_URL%%#*}
-VLESS_BASE=$(echo "$VLESS_URL_CLEAN" | cut -d '/' -f 3)
-UUID=$(echo "$VLESS_BASE" | cut -d '@' -f 1)
-ADDR_PORT=$(echo "$VLESS_BASE" | cut -d '@' -f 2)
-SERVER_IP=$(echo "$ADDR_PORT" | cut -d ':' -f 1)
-SERVER_PORT=$(echo "$ADDR_PORT" | cut -d ':' -f 2 | cut -d '?' -f 1)
 
-QUERY=$(echo "$VLESS_URL_CLEAN" | cut -d '?' -f 2)
-PUBLIC_KEY=$(echo "$QUERY" | tr '&' '\n' | grep '^pbk=' | cut -d '=' -f 2)
-SHORT_ID=$(echo "$QUERY" | tr '&' '\n' | grep '^sid=' | cut -d '=' -f 2)
-SNI=$(echo "$QUERY" | tr '&' '\n' | grep '^sni=' | cut -d '=' -f 2)
-PATH_ENC=$(echo "$QUERY" | tr '&' '\n' | grep '^path=' | cut -d '=' -f 2)
-PATH=$(printf '%b' "${PATH_ENC//%/\\x}")
-HOST=$(echo "$QUERY" | tr '&' '\n' | grep '^host=' | cut -d '=' -f 2)
+# 获取 uuid 和地址
+URL_BODY=${VLESS_URL_CLEAN#vless://}
+UUID=${URL_BODY%%@*}
+ADDR_PARAM=${URL_BODY#*@}
+SERVER_IP_PORT=${ADDR_PARAM%%\?*}
+SERVER_IP=${SERVER_IP_PORT%%:*}
+SERVER_PORT=${SERVER_IP_PORT##*:}
+QUERY_STRING=${ADDR_PARAM#*\?}
 
-if [[ -z "$UUID" || -z "$SERVER_IP" || -z "$SERVER_PORT" || -z "$PUBLIC_KEY" || -z "$SHORT_ID" || -z "$SNI" || -z "$PATH" || -z "$HOST" ]]; then
-  echo "❌ 无法完整解析链接"
+# 手动解析参数
+for kv in ${QUERY_STRING//&/ }; do
+  key="${kv%%=*}"
+  val="${kv#*=}"
+  case "$key" in
+    pbk) PUBLIC_KEY="$val" ;;
+    sid) SHORT_ID="$val" ;;
+    sni) SNI="$val" ;;
+    path) PATH_ENC="$val" ;;
+    host) HOST="$val" ;;
+  esac
+done
+
+# 校验参数
+if [[ -z "$UUID" || -z "$SERVER_IP" || -z "$SERVER_PORT" || -z "$PUBLIC_KEY" || -z "$SHORT_ID" || -z "$SNI" ]]; then
+  echo "❌ 无法从链接中解析出必要信息"
   exit 1
 fi
 
-echo "[2] 请输入本地 SOCKS5 端口（例如 10808）"
+echo "[2] 请输入本地 SOCKS5 监听端口（如 10808）："
 read -p "> " SOCKS_PORT
-[[ "$SOCKS_PORT" =~ ^[0-9]+$ ]] || { echo "❌ 端口必须为数字"; exit 1; }
+if ! [[ "$SOCKS_PORT" =~ ^[0-9]+$ ]]; then
+  echo "❌ 端口必须是数字"
+  exit 1
+fi
 
 SOCKS_USER="ekf6SxFf"
 SOCKS_PASS="l01uI3fS"
-CONTAINER_NAME="xray-${SOCKS_PORT}"
+CONTAINER_NAME="xray-socks5-${SOCKS_PORT}"
 WORKDIR="/opt/xray-socks5-${SOCKS_PORT}"
 INFO_FILE="/root/${SOCKS_PORT}.txt"
 
+# 获取公网 IP
 echo "[3] 获取公网 IP..."
-IP=""
+PUBLIC_IP=""
 for url in \
   "https://api.ipify.org" \
   "https://ifconfig.me" \
@@ -48,17 +63,19 @@ for url in \
   "https://icanhazip.com" \
   "https://ident.me"
 do
-    IP=$(timeout 5 curl -s "$url" || true)
-    [[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
+  PUBLIC_IP=$(timeout 5 curl -s "$url" || true)
+  [[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
 done
-[[ -z "$IP" ]] && IP="127.0.0.1"
+[[ -z "$PUBLIC_IP" ]] && PUBLIC_IP="127.0.0.1"
 
-echo "[4] 创建目录并清理旧容器..."
+echo "[4] 创建工作目录 $WORKDIR"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
-docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
-echo "[5] 生成配置..."
+echo "[5] 删除旧容器（如有）..."
+docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+
+echo "[6] 写入 Xray 配置文件..."
 cat > config.json <<EOF
 {
   "log": { "loglevel": "warning" },
@@ -68,7 +85,10 @@ cat > config.json <<EOF
     "settings": {
       "udp": true,
       "auth": "password",
-      "accounts": [{ "user": "${SOCKS_USER}", "pass": "${SOCKS_PASS}" }]
+      "accounts": [{
+        "user": "${SOCKS_USER}",
+        "pass": "${SOCKS_PASS}"
+      }]
     }
   }],
   "outbounds": [{
@@ -77,7 +97,10 @@ cat > config.json <<EOF
       "vnext": [{
         "address": "${SERVER_IP}",
         "port": ${SERVER_PORT},
-        "users": [{ "id": "${UUID}", "encryption": "none" }]
+        "users": [{
+          "id": "${UUID}",
+          "encryption": "none"
+        }]
       }]
     },
     "streamSettings": {
@@ -85,14 +108,14 @@ cat > config.json <<EOF
       "security": "reality",
       "realitySettings": {
         "serverName": "${SNI}",
+        "fingerprint": "chrome",
         "publicKey": "${PUBLIC_KEY}",
         "shortId": "${SHORT_ID}",
-        "fingerprint": "chrome",
         "show": false
       },
       "xhttpSettings": {
-        "host": "${HOST}",
-        "path": "${PATH}",
+        "host": "${HOST:-$SNI}",
+        "path": "/${SHORT_ID}?dw=2560",
         "mode": "stream-one"
       }
     }
@@ -100,19 +123,26 @@ cat > config.json <<EOF
 }
 EOF
 
-echo "[6] 启动容器..."
+echo "[7] 启动中转容器 ${CONTAINER_NAME}..."
 docker run -d --name "${CONTAINER_NAME}" --network host \
   --restart unless-stopped \
   -v "$WORKDIR/config.json":/etc/xray/config.json:ro \
   hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
 
-echo "[7] 启动完成 ✅ SOCKS5 代理信息如下："
-cat <<EOF | tee "$INFO_FILE"
---------------------------------------
-地址     : ${IP}
+echo "[8] 启动完成 ✅ SOCKS5 代理信息如下："
+echo "--------------------------------------"
+echo "地址     : ${PUBLIC_IP}"
+echo "端口     : ${SOCKS_PORT}"
+echo "用户名   : ${SOCKS_USER}"
+echo "密码     : ${SOCKS_PASS}"
+echo "--------------------------------------"
+
+cat > "$INFO_FILE" <<EOF
+SOCKS5 代理信息：
+地址     : ${PUBLIC_IP}
 端口     : ${SOCKS_PORT}
 用户名   : ${SOCKS_USER}
 密码     : ${SOCKS_PASS}
---------------------------------------
 EOF
-echo "[8] 信息已保存到：$INFO_FILE"
+
+echo "[9] 已保存信息到：$INFO_FILE"
