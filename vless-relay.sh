@@ -74,7 +74,7 @@ cat > config.json <<EOF
         "shortIds": ["${SHORT_ID}"]
       },
       "xhttpSettings": {
-        "host": ["${SNI}"],
+        "host": "${SNI}",
         "path": "/${SHORT_ID}?dw=2560",
         "mode": "stream-one"
       }
@@ -104,7 +104,7 @@ docker run -d --name xray-reality --network host \
   -v "$WORKDIR/config.json":/etc/xray/config.json:ro \
   hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
 
-VLESS_LINK="vless://${UUID}@${IP}:${PORT}?encryption=none&security=reality&sni=${SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp#Xray-Reality"
+VLESS_LINK="vless://${UUID}@${IP}:${PORT}?encryption=none&security=reality&sni=${SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=xhttp&path=%2F${SHORT_ID}%3Fdw%3D2560&host=${SNI}#Xray-Reality"
 
 echo "[11] 启动完成！代理信息如下："
 echo "--------------------------------------"
