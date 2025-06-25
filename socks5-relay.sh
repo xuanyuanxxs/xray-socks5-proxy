@@ -49,7 +49,7 @@ fi
 
 SOCKS_USER="ekf6SxFf"
 SOCKS_PASS="l01uI3fS"
-CONTAINER_NAME="xray-socks5-${SOCKS_PORT}"
+CONTAINER_NAME="xray-${SOCKS_PORT}"
 WORKDIR="/opt/xray-socks5-${SOCKS_PORT}"
 INFO_FILE="/root/${SOCKS_PORT}.txt"
 
