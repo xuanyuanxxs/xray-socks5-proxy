@@ -9,31 +9,29 @@ if [[ "$VLESS_URL" != vless://* ]]; then
   exit 1
 fi
 
-# 去除标签部分
 VLESS_URL_CLEAN=${VLESS_URL%%#*}
 VLESS_BASE=$(echo "$VLESS_URL_CLEAN" | cut -d '/' -f 3)
 UUID=$(echo "$VLESS_BASE" | cut -d '@' -f 1)
 ADDR_PORT=$(echo "$VLESS_BASE" | cut -d '@' -f 2)
 SERVER_IP=$(echo "$ADDR_PORT" | cut -d ':' -f 1)
-SERVER_PORT_OR_PARAM=$(echo "$ADDR_PORT" | cut -d ':' -f 2)
-SERVER_PORT=$(echo "$SERVER_PORT_OR_PARAM" | cut -d '?' -f 1)
+SERVER_PORT=$(echo "$ADDR_PORT" | cut -d ':' -f 2 | cut -d '?' -f 1)
 
 QUERY=$(echo "$VLESS_URL_CLEAN" | cut -d '?' -f 2)
 PUBLIC_KEY=$(echo "$QUERY" | tr '&' '\n' | grep '^pbk=' | cut -d '=' -f 2)
 SHORT_ID=$(echo "$QUERY" | tr '&' '\n' | grep '^sid=' | cut -d '=' -f 2)
 SNI=$(echo "$QUERY" | tr '&' '\n' | grep '^sni=' | cut -d '=' -f 2)
+PATH_ENC=$(echo "$QUERY" | tr '&' '\n' | grep '^path=' | cut -d '=' -f 2)
+PATH=$(printf '%b' "${PATH_ENC//%/\\x}")
+HOST=$(echo "$QUERY" | tr '&' '\n' | grep '^host=' | cut -d '=' -f 2)
 
-if [[ -z "$UUID" || -z "$SERVER_IP" || -z "$SERVER_PORT" || -z "$PUBLIC_KEY" || -z "$SHORT_ID" || -z "$SNI" ]]; then
-  echo "❌ 无法从链接中完整解析出必要信息"
+if [[ -z "$UUID" || -z "$SERVER_IP" || -z "$SERVER_PORT" || -z "$PUBLIC_KEY" || -z "$SHORT_ID" || -z "$SNI" || -z "$PATH" || -z "$HOST" ]]; then
+  echo "❌ 无法完整解析链接"
   exit 1
 fi
 
-echo "[2] 请输入本地 SOCKS5 代理监听端口（例如 10808）"
+echo "[2] 请输入本地 SOCKS5 端口（例如 10808）"
 read -p "> " SOCKS_PORT
-if ! [[ "$SOCKS_PORT" =~ ^[0-9]+$ ]]; then
-  echo "❌ 端口必须为数字"
-  exit 1
-fi
+[[ "$SOCKS_PORT" =~ ^[0-9]+$ ]] || { echo "❌ 端口必须为数字"; exit 1; }
 
 SOCKS_USER="ekf6SxFf"
 SOCKS_PASS="l01uI3fS"
@@ -41,25 +39,26 @@ CONTAINER_NAME="xray-${SOCKS_PORT}"
 WORKDIR="/opt/xray-socks5-${SOCKS_PORT}"
 INFO_FILE="/root/${SOCKS_PORT}.txt"
 
-# 获取公网 IP
 echo "[3] 获取公网 IP..."
-PUBLIC_IP=$(curl -s https://api.ipify.org || curl -s https://ifconfig.me)
-if [[ -z "$PUBLIC_IP" || "$PUBLIC_IP" == *"html"* ]]; then
-  echo "⚠️ 无法获取公网 IP，使用 127.0.0.1 替代"
-  PUBLIC_IP="127.0.0.1"
-fi
+IP=""
+for url in \
+  "https://api.ipify.org" \
+  "https://ifconfig.me" \
+  "https://ipinfo.io/ip" \
+  "https://icanhazip.com" \
+  "https://ident.me"
+do
+    IP=$(timeout 5 curl -s "$url" || true)
+    [[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
+done
+[[ -z "$IP" ]] && IP="127.0.0.1"
 
-echo "[4] 创建工作目录 $WORKDIR"
+echo "[4] 创建目录并清理旧容器..."
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
+docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
-echo "[5] 删除旧容器（如存在）..."
-if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  docker stop "$CONTAINER_NAME"
-  docker rm "$CONTAINER_NAME"
-fi
-
-echo "[6] 生成 Xray 配置..."
+echo "[5] 生成配置..."
 cat > config.json <<EOF
 {
   "log": { "loglevel": "warning" },
@@ -69,10 +68,7 @@ cat > config.json <<EOF
     "settings": {
       "udp": true,
       "auth": "password",
-      "accounts": [{
-        "user": "${SOCKS_USER}",
-        "pass": "${SOCKS_PASS}"
-      }]
+      "accounts": [{ "user": "${SOCKS_USER}", "pass": "${SOCKS_PASS}" }]
     }
   }],
   "outbounds": [{
@@ -81,48 +77,42 @@ cat > config.json <<EOF
       "vnext": [{
         "address": "${SERVER_IP}",
         "port": ${SERVER_PORT},
-        "users": [{
-          "id": "${UUID}",
-          "encryption": "none"
-        }]
+        "users": [{ "id": "${UUID}", "encryption": "none" }]
       }]
     },
     "streamSettings": {
-      "network": "tcp",
+      "network": "xhttp",
       "security": "reality",
       "realitySettings": {
         "serverName": "${SNI}",
-        "fingerprint": "chrome",
         "publicKey": "${PUBLIC_KEY}",
         "shortId": "${SHORT_ID}",
+        "fingerprint": "chrome",
         "show": false
+      },
+      "xhttpSettings": {
+        "host": "${HOST}",
+        "path": "${PATH}",
+        "mode": "stream-one"
       }
     }
   }]
 }
 EOF
 
-echo "[7] 启动中转容器 ${CONTAINER_NAME}..."
+echo "[6] 启动容器..."
 docker run -d --name "${CONTAINER_NAME}" --network host \
   --restart unless-stopped \
   -v "$WORKDIR/config.json":/etc/xray/config.json:ro \
   hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
 
-echo "[8] 启动成功 ✅"
-echo "SOCKS5 代理信息如下："
-echo "--------------------------------------"
-echo "地址     : ${PUBLIC_IP}"
-echo "端口     : ${SOCKS_PORT}"
-echo "用户名   : ${SOCKS_USER}"
-echo "密码     : ${SOCKS_PASS}"
-echo "--------------------------------------"
-
-cat > "$INFO_FILE" <<EOF
-SOCKS5 代理信息：
-地址     : ${PUBLIC_IP}
+echo "[7] 启动完成 ✅ SOCKS5 代理信息如下："
+cat <<EOF | tee "$INFO_FILE"
+--------------------------------------
+地址     : ${IP}
 端口     : ${SOCKS_PORT}
 用户名   : ${SOCKS_USER}
 密码     : ${SOCKS_PASS}
+--------------------------------------
 EOF
-
-echo "[9] SOCKS5 信息已保存到：$INFO_FILE"
+echo "[8] 信息已保存到：$INFO_FILE"
