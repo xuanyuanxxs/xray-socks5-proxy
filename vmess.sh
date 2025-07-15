@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-WORKDIR="/opt/xray-vmess"
+WORKDIR="/etc/xray-vmess"
 echo "[1] 创建工作目录 $WORKDIR"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
