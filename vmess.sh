@@ -73,7 +73,7 @@ docker rm -f xray-vmess >/dev/null 2>&1 || true
 echo "[8] 启动新容器"
 docker run -d --name xray-vmess --network host \
   --restart unless-stopped \
-  -v "$(pwd)/config.json:/etc/xray/config.json:ro" \
+  -v "$(pwd):/etc/xray:ro" \
   hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
 
 echo "[9] 生成 VMess 链接"
