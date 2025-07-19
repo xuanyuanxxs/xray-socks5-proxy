@@ -127,7 +127,7 @@ echo "[7] 启动中转容器 ${CONTAINER_NAME}..."
 docker run -d --name "${CONTAINER_NAME}" --network host \
   --restart unless-stopped \
   -v "$WORKDIR/config.json":/etc/xray/config.json:ro \
-  docker.1panel.live/teddysun/xray xray -config /etc/xray/config.json
+  hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
 
 echo "[8] 启动完成 ✅ SOCKS5 代理信息如下："
 echo "--------------------------------------"
