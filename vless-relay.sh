@@ -1,18 +1,4 @@
-#!/bin/bash
-set -e
-
-# [0] 检查并安装 Docker（仅适用于 CentOS 7）
-if ! command -v docker &> /dev/null; then
-  echo "[0] Docker 未安装，开始使用 yum 安装..."
-  yum install -y docker
-  systemctl start docker
-  systemctl enable docker
-  echo "[0] Docker 安装完成并已启动"
-else
-  echo "[0] Docker 已安装，确保服务已启用"
-  systemctl start docker
-  systemctl enable docker
-fi
+#!/bin/bash 
 
 # [1] 检查镜像是否已存在
 if docker image inspect hub.rat.dev/teddysun/xray:latest &>/dev/null; then
@@ -22,10 +8,22 @@ elif [ -f /root/xray.tar ]; then
   docker load -i /root/xray.tar
 else
   echo "[1] 镜像不存在，尝试从远程下载 xray.tar..."
-  curl -L -o /root/xray.tar http://8.210.118.164:58080/xray.tar
+
+  # 尝试地址 1
+  if curl -fsSL -o /root/xray.tar http://8.210.118.164:58080/xray.tar; then
+    echo "[+] 成功从地址 1 下载"
+  # 尝试地址 2
+  elif curl -fsSL -o /root/xray.tar http://47.100.25.61:58080/xray.tar; then
+    echo "[+] 成功从地址 2 下载"
+  else
+    echo "[✗] 两个地址都无法下载 xray.tar，退出"
+    exit 1
+  fi
+
   docker load -i /root/xray.tar
 fi
 
+set -e
 # 设置工作目录
 WORKDIR="/opt/xray-reality"
 echo "[2] 创建工作目录 $WORKDIR"
@@ -117,15 +115,15 @@ fi
 
 # 删除旧容器
 echo "[8] 检查旧容器..."
-if docker ps -a --format '{{.Names}}' | grep -q '^xray-reality$'; then
+if docker ps -a --format '{{.Names}}' | grep -q '^xray-vless$'; then
   echo "[8] 停止并删除旧容器"
-  docker stop xray-reality
-  docker rm xray-reality
+  docker stop xray-vless
+  docker rm xray-vless
 fi
 
 # 启动新容器
 echo "[9] 启动容器..."
-docker run -d --name xray-reality --network host \
+docker run -d --name xray-vless --network host \
   --restart unless-stopped \
   -v "$WORKDIR/config.json":/etc/xray/config.json:ro \
   hub.rat.dev/teddysun/xray xray -config /etc/xray/config.json
