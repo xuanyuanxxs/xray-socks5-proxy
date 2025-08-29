@@ -55,7 +55,7 @@ for choice in $input; do
         ;;
     5)
         echo ">>> [5] 部署中转节点"
-        bash -c "$(curl -fsSL https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/show.sh)"
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/xray-transfer.sh)"
         ;;
     *)
         echo "❌ 无效选项：$choice，跳过。"
