@@ -26,7 +26,7 @@ echo "  1) 安装 SOCKS 服务端"
 echo "  2) 安装 VLESS 服务端"
 echo "  3) 安装 VMess 服务端"
 echo "  4) 安装 Shadowsocks 服务端"
-echo "  5) 部署中转节点"
+echo "  5) 部署 中转节点"
 echo "=================================================="
 read -rp "请输入对应编号（多个用空格分隔）[1-5]：" input
 
