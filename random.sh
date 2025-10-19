@@ -135,7 +135,7 @@ echo "--- 运行 /etc/name.sh ---"
 echo "--- 运行 /etc/mac.sh ---"
 /etc/mac.sh
 echo "--- 运行 /etc/ip.sh ---"
-/etc/ip.sh
+#/etc/ip.sh
 
 echo ""
 echo "========================================"
