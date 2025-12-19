@@ -133,7 +133,7 @@ echo "--- 3. 正在立即运行脚本进行初始化测试 (请注意网络中�
 echo "--- 运行 /etc/name.sh ---"
 #/etc/name.sh
 echo "--- 运行 /etc/mac.sh ---"
-/etc/mac.sh
+#/etc/mac.sh
 echo "--- 运行 /etc/ip.sh ---"
 #/etc/ip.sh
 
