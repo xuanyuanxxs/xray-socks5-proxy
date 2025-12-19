@@ -115,7 +115,7 @@ if ! grep -q "Randomization Scripts" "$RC_LOCAL"; then
             print "# --- START Custom Randomization Scripts ---"
             print "/etc/name.sh"
             print "/etc/mac.sh"
-            print "/etc/ip.sh"
+            print "#/etc/ip.sh"
             print "# --- END Custom Randomization Scripts ---"
             print "exit 0"
             next
