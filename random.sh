@@ -23,16 +23,16 @@ uci set system.@system[0].hostname="${NEW_HOSTNAME}"
 echo "📝 配置修改成功: ${SYSTEM_CONFIG} 中的 option hostname 已更新。"
 
 # --- 3. 提交更改并应用 ---
-uci commit system
+#uci commit system
 
 # 重载 system 服务以应用新的主机名
-/etc/init.d/system reload
+#/etc/init.d/system reload
 
 echo "✨ 新的主机名已应用。"
 
 # --- 4. 验证 ---
-echo "--- 验证 ---"
-uci get system.@system[0].hostname
+#echo "--- 验证 ---"
+#uci get system.@system[0].hostname
 EOF_NAME
 chmod +x /etc/name.sh
 echo "✅ 文件 /etc/name.sh 创建成功。"
@@ -63,7 +63,7 @@ echo ">>> 随机 MAC: $RAND_MAC"
 echo ">>> 修改完成，已更新 $NETFILE"
 
 # 应用配置
-/etc/init.d/network reload
+#/etc/init.d/network reload
 EOF_MAC
 chmod +x /etc/mac.sh
 echo "✅ 文件 /etc/mac.sh 创建成功。"
@@ -97,7 +97,7 @@ echo ">>> 随机 LAN IP: $RAND_IP"
 echo ">>> 修改完成，已更新 $NETFILE"
 
 # 应用配置
-/etc/init.d/network reload
+#/etc/init.d/network reload
 EOF_IP
 chmod +x /etc/ip.sh
 echo "✅ 文件 /etc/ip.sh 创建成功。"
