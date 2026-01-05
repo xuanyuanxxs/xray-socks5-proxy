@@ -35,11 +35,11 @@ echo "✨ 新的主机名已应用。"
 #uci get system.@system[0].hostname
 EOF_NAME
 chmod +x /etc/config/name.sh
-hmod "✅ 文件 /etc/config/name.sh 创建成功。"
+echo "✅ 文件 /etc/config/name.sh 创建成功。"
 
 
-✅ 文件 /etc/config✅ 文件 /etc/config✅ 文件 /etc/confi/name
-cat << "EOF_MAC" > /etc/mac.sh
+# 1. 创建 mac.sh 文件 (随机mac)
+cat << "EOF_MAC" > /etc/config/mac.sh
 #!/bin/sh
 set -e
 
@@ -65,12 +65,12 @@ echo ">>> 修改完成，已更新 $NETFILE"
 # 应用配置
 #/etc/init.d/network reload
 EOF_MAC
-chmod +x /etc/mac.sh
-echo "✅ 文件 /etc/mac.sh 创建成功。"
+chmod +x /etc/config/mac.sh
+echo "✅ 文件 /etc/config/mac.sh 创建成功。"
 
 
 # 3. 创建 ip.sh 文件 (随机 LAN IP 地址，包含 rand_byte 函数和 ASH 兼容语法)
-cat << "EOF_IP" > /etc/ip.sh
+cat << "EOF_IP" > /etc/config/ip.sh
 #!/bin/sh
 set -e
 
@@ -99,8 +99,8 @@ echo ">>> 修改完成，已更新 $NETFILE"
 # 应用配置
 #/etc/init.d/network reload
 EOF_IP
-chmod +x /etc/ip.sh
-echo "✅ 文件 /etc/ip.sh 创建成功。"
+chmod +x /etc/config/ip.sh
+echo "✅ 文件 /etc/config/ip.sh 创建成功。"
 
 echo ""
 echo "--- 2. 正在配置开机启动 (/etc/rc.local) ---"
@@ -113,9 +113,9 @@ if ! grep -q "Randomization Scripts" "$RC_LOCAL"; then
         /exit 0/ {
             print ""
             print "# --- START Custom Randomization Scripts ---"
-            print "/etc/name.sh"
-            print "/etc/mac.sh"
-            print "#/etc/ip.sh"
+            print "/etc/config/name.sh"
+            print "/etc/config/mac.sh"
+            print "#/etc/config/ip.sh"
             print "# --- END Custom Randomization Scripts ---"
             print "exit 0"
             next
@@ -130,12 +130,12 @@ fi
 
 echo ""
 echo "--- 3. 正在立即运行脚本进行初始化测试 (请注意网络中断) ---"
-echo "--- 运行 /etc/name.sh ---"
-#/etc/name.sh
-echo "--- 运行 /etc/mac.sh ---"
-#/etc/mac.sh
-echo "--- 运行 /etc/ip.sh ---"
-#/etc/ip.sh
+echo "--- 运行 /etc/config/name.sh ---"
+#/etc/config/name.sh
+echo "--- 运行 /etc/config/mac.sh ---"
+#/etc/config/mac.sh
+echo "--- 运行 /etc/config/ip.sh ---"
+#/etc/config/ip.sh
 
 echo ""
 echo "========================================"
