@@ -40,16 +40,15 @@ NETFILE="/etc/config/network"
 
 rand_byte() {
     C=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null)
-    printf "%d" "'\$C'"
+    printf "%d" "'$C'"
 }
 
 RAND_MAC=$(printf "02:%02X:%02X:%02X:%02X:%02X" \
-  \$(rand_byte) \$(rand_byte) \$(rand_byte) \$(rand_byte) \$(rand_byte))
+  $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte))
 
-sed -i "s/^\(\s*option macaddr\s*\).*/\1 '\$RAND_MAC'/" "\$NETFILE"
+sed -i "s/^\(\s*option macaddr\s*\).*/\1 '$RAND_MAC'/" "$NETFILE"
 
-echo ">>> 随机 MAC: \$RAND_MAC"
-#/etc/init.d/network reload
+echo ">>> 随机 MAC: $RAND_MAC"
 EOF_MAC
 
 chmod +x ${BASE_DIR}/mac.sh
