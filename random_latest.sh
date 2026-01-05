@@ -22,7 +22,7 @@ uci commit system
 #/etc/init.d/system reload
 
 echo "✨ 新的主机名已应用"
-uci get system.@system[0].hostname
+#uci get system.@system[0].hostname
 EOF_NAME
 
 chmod +x ${BASE_DIR}/name.sh
