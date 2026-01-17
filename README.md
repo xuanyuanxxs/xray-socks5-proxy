@@ -4,5 +4,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-prox
 bash <(curl -fsSL https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random.sh)
 bash <(curl -fsSL https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random_latest.sh)
 
-#精简版系统可用
+#连续mac
 sh <(wget -qO- https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random_latest.sh)
+#兼容mac
+sh <(wget -qO- https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random_same.sh)
