@@ -43,24 +43,54 @@ cat << "EOF_MAC" > /etc/config/mac.sh
 #!/bin/sh
 set -e
 
+# 文件路径
 NETFILE="/etc/config/network"
 
-# 必须包含 rand_byte 函数
-rand_byte() {
-    # 读一个字节，转成十进制
-    C=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null)
-    printf "%d" "'$C'"
+# 生成随机 MAC (02 开头 = 本地地址)
+rand_byte() { printf "%02X" $((RANDOM%256)); }
+MAC_PREFIX=$(printf "02:%s:%s:%s:%s" \
+  $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte))
+
+LAN_MAC="$MAC_PREFIX:01"
+WAN_MAC="$MAC_PREFIX:02"
+# 获取 interface 对应的 device
+get_iface_dev() {
+    uci -q get network.$1.device || uci -q get network.$1.ifname
 }
 
-# 生成随机 MAC (02 开头 = 本地管理)
-RAND_MAC=$(printf "02:%02X:%02X:%02X:%02X:%02X" \
-  $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte))
+LAN_DEV=$(get_iface_dev lan)
+WAN_DEV=$(get_iface_dev wan)
 
-# 修改所有的 macaddr
-sed -i "s/^\(\s*option macaddr\s*\).*/\1 '$RAND_MAC'/" "$NETFILE"
-echo ">>> 随机 MAC: $RAND_MAC"
+[ -z "$LAN_DEV" ] && echo "LAN device not found" && exit 1
+[ -z "$WAN_DEV" ] && echo "WAN device not found" && exit 1
 
-echo ">>> 修改完成，已更新 $NETFILE"
+echo "LAN device: $LAN_DEV"
+echo "WAN device: $WAN_DEV"
+
+# 获取 device 块，如果不存在就创建
+get_device_section() {
+    for sec in $(uci show network | grep "=device" | cut -d= -f1); do
+        name=$(uci -q get $sec.name)
+        [ "$name" = "$1" ] && echo "$sec" && return
+    done
+    # 不存在就创建
+    sec="network.@device[-1]"  # 最后追加
+    uci add network device
+    uci set $sec.name="$1"
+    echo "$sec"
+}
+
+LAN_SEC=$(get_device_section "$LAN_DEV")
+WAN_SEC=$(get_device_section "$WAN_DEV")
+
+# 设置 MAC
+uci set $LAN_SEC.macaddr="$LAN_MAC"
+uci set $WAN_SEC.macaddr="$WAN_MAC"
+uci commit network
+
+echo "LAN MAC: $LAN_MAC"
+echo "WAN MAC: $WAN_MAC"
+echo "network config updated"
 
 # 应用配置
 #/etc/init.d/network reload
