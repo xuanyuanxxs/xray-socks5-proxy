@@ -47,12 +47,20 @@ set -e
 NETFILE="/etc/config/network"
 
 # 生成随机 MAC (02 开头 = 本地地址)
-rand_byte() { printf "%02X" $((RANDOM%256)); }
-MAC_PREFIX=$(printf "50:64:2B:%s:%s" \
-  $(rand_byte) $(rand_byte) $(rand_byte) $(rand_byte))
+# 生成 1 个 00–FF 的 16 进制字节（ASH 兼容）
+rand_byte() {
+    printf "%02X" $((RANDOM % 256))
+}
 
-LAN_MAC="$MAC_PREFIX:01"
-WAN_MAC="$MAC_PREFIX:02"
+# 固定前缀 + 3 个随机字节 = 6 字节 MAC
+MAC_BASE=$(printf "50:64:2B:%s:%s:%s" \
+    "$(rand_byte)" \
+    "$(rand_byte)" \
+    "$(rand_byte)")
+
+LAN_MAC="${MAC_BASE}"
+WAN_MAC="$(printf "%s:%02X" "${MAC_BASE%:*}" $((0x${MAC_BASE##*:} + 1)))"
+
 # 获取 interface 对应的 device
 get_iface_dev() {
     uci -q get network.$1.device || uci -q get network.$1.ifname
