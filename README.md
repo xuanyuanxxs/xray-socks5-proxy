@@ -17,5 +17,5 @@ wget -qO- https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/r
 
 #小米mac
 
-wget -qO- https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random_xiaomi.sh) | sh
+wget -qO- https://raw.githubusercontent.com/xuanyuanxxs/xray-socks5-proxy/main/random_xiaomi.sh | sh
 
